@@ -1,0 +1,28 @@
+# ToDo: hot reloads
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: go-rhea
+build:
+  artifacts:
+    - image: junoinnovations/rhea
+      docker:
+        dockerfile: Dockerfile
+    - image: junoinnovations/rhea-e2e
+      docker:
+        dockerfile: Dockerfile.e2e
+
+manifests:
+  kustomize:
+    paths:
+      - k8s/
+
+verify:
+  - name: rhea-e2e
+    container:
+      image: junoinnovations/rhea-e2e
+      name: rhea-e2e
+    timeout: 600
+    executionMode:
+      kubernetesCluster:
+        jobManifestPath: e2e/test_runner.yaml  # This is needed to assign the service account

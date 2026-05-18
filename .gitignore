@@ -1,0 +1,8 @@
+venv/
+
+build.json
+
+.tools
+.juno-ci
+cover.out
+cover.html
