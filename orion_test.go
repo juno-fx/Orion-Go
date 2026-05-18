@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
+	"net/http"
 	oriongo "orion-go"
 	"os"
 	"testing"
@@ -16,41 +17,18 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	privateKey, _ := generateTestRSAKey(t)
-	kid := "test-kid-noaud"
-
-	token := createTestJWT(t, privateKey, kid, map[string]interface{}{
-		"sub":                                    "system:serviceaccount:default:my-service",
-		"kubernetes.io/serviceaccount/namespace": "default",
-		"kubernetes.io/serviceaccount/service-account.name": "my-service",
-		"exp": time.Now().Add(1 * time.Hour).Unix(),
-	})
-
-	namespaceFile, err := os.CreateTemp("./", "namespace_file")
-	require.NoError(t, err)
-	_, err = namespaceFile.WriteString("default")
-	require.NoError(t, err)
-
-	file, err := os.CreateTemp("./", "test_token")
-	require.NoError(t, err)
-	_, err = file.WriteString(token)
-	require.NoError(t, err)
-
-	oriongo.TokenPath = file.Name()
-	oriongo.NamespacePath = namespaceFile.Name()
-	oriongo.K8sClientFunc = setupK8sTestClient
+	tokenFile, nsFile := setupTest(t)
 
 	defer func() {
-		file.Close()
-		require.NoError(t, os.Remove(file.Name()))
-		namespaceFile.Close()
-		require.NoError(t, os.Remove(namespaceFile.Name()))
+		require.NoError(t, os.Remove(tokenFile))
+		require.NoError(t, os.Remove(nsFile))
 	}()
 
 	client, err := oriongo.Setup()
 	require.NoError(t, err)
 	require.NotNil(t, client)
 }
+
 func TestNewClientErrs(t *testing.T) {
 	oriongo.K8sClientFunc = setupK8sTestClientFail
 	client, err := oriongo.Setup()
@@ -113,6 +91,61 @@ func TestNewClientTokenSubject(t *testing.T) {
 	client, err := oriongo.Setup()
 	require.NoError(t, err)
 	require.NotNil(t, client)
+}
+
+func TestMakeRequest(t *testing.T) {
+	tokenFile, nsFile := setupTest(t)
+
+	defer func() {
+		require.NoError(t, os.Remove(tokenFile))
+		require.NoError(t, os.Remove(nsFile))
+	}()
+
+	client, err := oriongo.Setup()
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	req, err := http.NewRequest("GET", "http://genesis.argocd.kubernetes.local/some/api", nil)
+	require.NoError(t, err)
+
+	resp, err := client.Do(req, "default", "genesis")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+}
+
+func setupTest(t *testing.T) (string, string) {
+	t.Helper()
+
+	privateKey, _ := generateTestRSAKey(t)
+	kid := "test-kid-noaud"
+
+	token := createTestJWT(t, privateKey, kid, map[string]interface{}{
+		"sub":                                    "system:serviceaccount:default:my-service",
+		"kubernetes.io/serviceaccount/namespace": "default",
+		"kubernetes.io/serviceaccount/service-account.name": "my-service",
+		"exp": time.Now().Add(1 * time.Hour).Unix(),
+	})
+
+	namespaceFile, err := os.CreateTemp("./", "namespace_file")
+	require.NoError(t, err)
+	_, err = namespaceFile.WriteString("default")
+	require.NoError(t, err)
+
+	file, err := os.CreateTemp("./", "test_token")
+	require.NoError(t, err)
+	_, err = file.WriteString(token)
+	require.NoError(t, err)
+
+	oriongo.TokenPath = file.Name()
+	oriongo.NamespacePath = namespaceFile.Name()
+	oriongo.K8sClientFunc = setupK8sTestClient
+
+	defer func() {
+		file.Close()
+		namespaceFile.Close()
+	}()
+	return namespaceFile.Name(), file.Name()
 }
 
 func setupK8sTestClient() (kubernetes.Interface, error) {
