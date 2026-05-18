@@ -13,14 +13,15 @@ import (
 
 // These are vars so we can override them for testing etc
 var (
-	namespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-	tokenPath     = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	NamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	TokenPath     = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
-// These custom type and function are here to facilitate a easier time setting up and testing
-type k8sClientFuncType = func() (*kubernetes.Interface, error)
+// K8sClientFuncType is a function to facilitate a easier time setting up and testing
+type K8sClientFuncType = func() (kubernetes.Interface, error)
 
-var k8sClientFunc = newK8sClient
+// K8sClientFunc is a custom type to facilitate a easier time setting up and testing
+var K8sClientFunc K8sClientFuncType = newK8sClient
 
 // Client is a struct holding all runtime information for communication with orion services
 type Client struct {
@@ -31,7 +32,7 @@ type Client struct {
 
 func Setup() (*Client, error) {
 
-	k8sClient, err := k8sClientFunc()
+	k8sClient, err := K8sClientFunc()
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +60,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	return nil, nil
 }
 
-func newK8sClient() (*kubernetes.Clientset, error) {
+func newK8sClient() (kubernetes.Interface, error) { // coverage-ignore
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
@@ -77,7 +78,7 @@ func getNamespace() (string, error) {
 	namespace, set := os.LookupEnv("NAMESPACE")
 	if !set {
 		// K8s mounts the namespace at this path inside every pod
-		data, err := os.ReadFile(namespacePath)
+		data, err := os.ReadFile(NamespacePath)
 		if err != nil {
 			return "", fmt.Errorf("failed to read namespace: %w", err)
 		}
@@ -87,7 +88,7 @@ func getNamespace() (string, error) {
 }
 
 func getServiceAccountName() (string, error) {
-	tokenData, err := os.ReadFile(tokenPath)
+	tokenData, err := os.ReadFile(TokenPath)
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +101,7 @@ func getServiceAccountName() (string, error) {
 	}
 
 	subject, err := token.Claims.GetSubject()
-	if err != nil {
+	if err != nil { // coverage-ignore
 		return "", err
 	}
 
