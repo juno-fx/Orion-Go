@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"k8s.io/client-go/kubernetes"
@@ -28,6 +30,13 @@ type Client struct {
 	k8sClient          kubernetes.Interface
 	namespace          string
 	serviceAccountName string
+	cache              map[string]cacheItem
+	cacheLock          sync.Mutex
+}
+
+type cacheItem struct {
+	token string
+	exp   time.Time
 }
 
 func Setup() (*Client, error) {
@@ -51,13 +60,23 @@ func Setup() (*Client, error) {
 		k8sClient:          k8sClient,
 		namespace:          namespace,
 		serviceAccountName: serviceAccountName,
+		cache:              map[string]cacheItem{},
+		cacheLock:          sync.Mutex{},
 	}
 
 	return orionClient, nil
 }
 
-func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	return nil, nil
+func (c *Client) Do(req *http.Request, namespace, service string) (*http.Response, error) {
+
+	token, err := c.getToken(namespace, service)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("X-ORION-SERVICE-AUTH", token)
+
+	return http.DefaultClient.Do(req)
 }
 
 func newK8sClient() (kubernetes.Interface, error) { // coverage-ignore
