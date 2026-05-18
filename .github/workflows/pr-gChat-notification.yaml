@@ -1,0 +1,45 @@
+name: PR Message
+
+on:
+  pull_request:
+    types:
+      - review_requested
+
+jobs:
+  google-chat-action:
+    runs-on: self-hosted
+    steps:
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.JUNO_CI_APP_ID }}
+          private-key: ${{ secrets.JUNO_CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+      - name: Checkout CI repository
+        uses: actions/checkout@v4
+        with:
+          repository: juno-fx/ci
+          ref: main
+          path: .juno-ci
+          token: ${{ steps.generate-token.outputs.token }}
+      - name: Run Google Chat notification
+        uses: ./.juno-ci/actions/workflow/pr-gChat-notification
+        with:
+          webhookUrl: ${{ secrets.GCHAT_PR_SPACE }}
+          title: ${{ github.repository }}
+          subtitle: ${{ github.head_ref }}
+          additionalSections: >
+            {
+              "header": "Requested Reviewer",
+              "widgets": [
+                {
+                  "decoratedText": {
+                    "text": "${{ github.event.requested_reviewer && github.event.requested_reviewer.login || github.event.requested_team && github.event.requested_team.name || 'N/A' }}",
+                    "icon": {
+                      "knownIcon": "PERSON"
+                    }
+                  }
+                }
+              ]
+            }

@@ -1,0 +1,34 @@
+on:
+  create:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  repository-projects: read # github's current permission scheme makes this necessary: https://github.com/cli/cli/issues/6274
+
+jobs:
+  PR:
+    runs-on: X64
+    if: github.event.ref_type == 'branch'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.JUNO_CI_APP_ID }}
+          private-key: ${{ secrets.JUNO_CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+      - name: Checkout CI repository
+        uses: actions/checkout@v4
+        with:
+          repository: juno-fx/ci
+          ref: main
+          path: .juno-ci
+          token: ${{ steps.generate-token.outputs.token }}
+      - name: Run PR on branch creation
+        uses: ./.juno-ci/actions/workflow/pr-on-branch-creation
+        with:
+          gh_token: ${{ steps.generate-token.outputs.token }}
