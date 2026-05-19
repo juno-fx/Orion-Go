@@ -39,7 +39,6 @@ func (c *Client) getToken(namespace, service string) (string, error) {
 	}
 
 	return tokenStatus.Token, nil
-
 }
 
 func (c *Client) createToken(audience string) (*authenticationv1.TokenRequestStatus, error) {
@@ -55,7 +54,6 @@ func (c *Client) createToken(audience string) (*authenticationv1.TokenRequestSta
 	response, err := c.k8sClient.CoreV1().
 		ServiceAccounts(c.namespace).
 		CreateToken(context.Background(), c.serviceAccountName, tokenRequest, metav1.CreateOptions{})
-
 	if err != nil {
 		return nil, err
 	}

@@ -27,6 +27,7 @@ func TestNewClient(t *testing.T) {
 	origFn := oriongo.K8sClientFunc
 	origToken := oriongo.TokenPath
 	origNs := oriongo.NamespacePath
+
 	t.Cleanup(func() {
 		oriongo.K8sClientFunc = origFn
 		oriongo.TokenPath = origToken
@@ -48,11 +49,13 @@ func TestNewClientErrs(t *testing.T) {
 	origFn := oriongo.K8sClientFunc
 	origToken := oriongo.TokenPath
 	origNs := oriongo.NamespacePath
+
 	t.Cleanup(func() {
 		oriongo.K8sClientFunc = origFn
 		oriongo.TokenPath = origToken
 		oriongo.NamespacePath = origNs
 	})
+
 	oriongo.K8sClientFunc = setupK8sTestClientFail
 	client, err := oriongo.Setup()
 	require.Error(t, err)
@@ -65,6 +68,7 @@ func TestNewClientErrs(t *testing.T) {
 	require.Nil(t, client)
 
 	t.Setenv("NAMESPACE", "default")
+
 	client, err = oriongo.Setup()
 	require.Error(t, err)
 	require.Nil(t, client)
@@ -73,18 +77,22 @@ func TestNewClientErrToken(t *testing.T) {
 	origFn := oriongo.K8sClientFunc
 	origToken := oriongo.TokenPath
 	origNs := oriongo.NamespacePath
+
 	t.Cleanup(func() {
 		oriongo.K8sClientFunc = origFn
 		oriongo.TokenPath = origToken
 		oriongo.NamespacePath = origNs
 	})
+
 	oriongo.K8sClientFunc = setupK8sTestClient
+
 	t.Setenv("NAMESPACE", "default")
 
 	file, err := os.CreateTemp("./", "test_token")
 	require.NoError(t, err)
 	_, err = file.WriteString("I'm not a token!")
 	require.NoError(t, err)
+
 	oriongo.TokenPath = file.Name()
 
 	defer func() {
@@ -101,12 +109,15 @@ func TestNewClientTokenSubject(t *testing.T) {
 	origFn := oriongo.K8sClientFunc
 	origToken := oriongo.TokenPath
 	origNs := oriongo.NamespacePath
+
 	t.Cleanup(func() {
 		oriongo.K8sClientFunc = origFn
 		oriongo.TokenPath = origToken
 		oriongo.NamespacePath = origNs
 	})
+
 	oriongo.K8sClientFunc = setupK8sTestClient
+
 	t.Setenv("NAMESPACE", "default")
 
 	privateKey, _ := generateTestRSAKey(t)
@@ -120,6 +131,7 @@ func TestNewClientTokenSubject(t *testing.T) {
 	require.NoError(t, err)
 	_, err = file.WriteString(token)
 	require.NoError(t, err)
+
 	oriongo.TokenPath = file.Name()
 
 	defer func() {
@@ -136,12 +148,15 @@ func TestMakeRequest(t *testing.T) {
 	origFn := oriongo.K8sClientFunc
 	origToken := oriongo.TokenPath
 	origNs := oriongo.NamespacePath
+
 	t.Cleanup(func() {
 		oriongo.K8sClientFunc = origFn
 		oriongo.TokenPath = origToken
 		oriongo.NamespacePath = origNs
 	})
+
 	oriongo.HTTPClient = &http.Client{Transport: &mockTransport{}}
+
 	t.Cleanup(func() { oriongo.HTTPClient = &http.Client{} })
 	tokenFile, nsFile := setupTest(t)
 
@@ -175,12 +190,15 @@ func TestBadURL(t *testing.T) {
 	origFn := oriongo.K8sClientFunc
 	origToken := oriongo.TokenPath
 	origNs := oriongo.NamespacePath
+
 	t.Cleanup(func() {
 		oriongo.K8sClientFunc = origFn
 		oriongo.TokenPath = origToken
 		oriongo.NamespacePath = origNs
 	})
+
 	oriongo.HTTPClient = &http.Client{Transport: &mockTransport{}}
+
 	t.Cleanup(func() { oriongo.HTTPClient = &http.Client{} })
 	tokenFile, nsFile := setupTest(t)
 
@@ -202,9 +220,11 @@ func TestBadURL(t *testing.T) {
 
 func setupTest(t *testing.T) (string, string) {
 	t.Helper()
+
 	origFn := oriongo.K8sClientFunc
 	origToken := oriongo.TokenPath
 	origNs := oriongo.NamespacePath
+
 	t.Cleanup(func() {
 		oriongo.K8sClientFunc = origFn
 		oriongo.TokenPath = origToken
@@ -268,6 +288,7 @@ func setupK8sTestClient() (kubernetes.Interface, error) {
 			return nil, err
 		}
 	}
+
 	return fakeK8s, nil
 }
 func setupK8sTestClientFail() (kubernetes.Interface, error) {

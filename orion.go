@@ -44,7 +44,6 @@ type cacheItem struct {
 }
 
 func Setup() (*Client, error) {
-
 	k8sClient, err := K8sClientFunc()
 	if err != nil {
 		return nil, err
@@ -76,6 +75,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	token, err := c.getToken(namespace, service)
 	if err != nil {
 		return nil, err
@@ -108,8 +108,10 @@ func getNamespace() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to read namespace: %w", err)
 		}
+
 		namespace = string(data)
 	}
+
 	return namespace, nil
 }
 
@@ -134,6 +136,7 @@ func getServiceAccountName() (string, error) {
 	if parts := strings.Split(subject, ":"); len(parts) >= 4 {
 		return parts[3], nil
 	}
+
 	return "default", nil
 }
 
