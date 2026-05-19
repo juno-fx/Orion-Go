@@ -1,3 +1,4 @@
+// Package oriongo provides a wrapper to allow orion services to communicate with each other via the rhea middleware
 package oriongo
 
 import (
@@ -17,7 +18,7 @@ import (
 // These are vars so we can override them for testing etc
 var (
 	NamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-	TokenPath     = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	TokenPath     = "/var/run/secrets/kubernetes.io/serviceaccount/token" //nolint:gosec
 )
 
 // K8sClientFuncType is a function to facilitate a easier time setting up and testing
@@ -43,6 +44,7 @@ type cacheItem struct {
 	exp   time.Time
 }
 
+// Setup initializes the orion client ready for use, creates and retrieves information from the k8s client
 func Setup() (*Client, error) {
 	k8sClient, err := K8sClientFunc()
 	if err != nil {
@@ -70,6 +72,7 @@ func Setup() (*Client, error) {
 	return orionClient, nil
 }
 
+// Do takes the provides http.Request and adds the header token that allows communication
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	service, namespace, err := getNamespaceService(req.URL.String())
 	if err != nil {
@@ -83,7 +86,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	req.Header.Add("X-ORION-SERVICE-AUTH", token)
 
-	return HTTPClient.Do(req)
+	return HTTPClient.Do(req) //nolint:gosec
 }
 
 func newK8sClient() (kubernetes.Interface, error) { // coverage-ignore

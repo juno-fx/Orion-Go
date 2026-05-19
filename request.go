@@ -15,12 +15,9 @@ func (c *Client) getToken(namespace, service string) (string, error) {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
 
-	token := ""
-	expiry := time.Time{}
-
 	if item, ok := c.cache[serviceKey]; ok {
-		expiry = item.exp
-		token = item.token
+		expiry := item.exp
+		token := item.token
 
 		if time.Now().Before(expiry.Add(-time.Minute)) {
 			return token, nil

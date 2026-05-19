@@ -96,7 +96,7 @@ func TestNewClientErrToken(t *testing.T) {
 	oriongo.TokenPath = file.Name()
 
 	defer func() {
-		file.Close()
+		require.NoError(t, file.Close())
 		require.NoError(t, os.Remove(file.Name()))
 	}()
 
@@ -120,10 +120,10 @@ func TestNewClientTokenSubject(t *testing.T) {
 
 	t.Setenv("NAMESPACE", "default")
 
-	privateKey, _ := generateTestRSAKey(t)
+	privateKey := generateTestRSAKey(t)
 	kid := "test-kid-noaud"
 
-	token := createTestJWT(t, privateKey, kid, map[string]interface{}{
+	token := createTestJWT(t, privateKey, kid, map[string]any{
 		"exp": time.Now().Add(1 * time.Hour).Unix(),
 	})
 
@@ -135,7 +135,7 @@ func TestNewClientTokenSubject(t *testing.T) {
 	oriongo.TokenPath = file.Name()
 
 	defer func() {
-		file.Close()
+		require.NoError(t, file.Close())
 		require.NoError(t, os.Remove(file.Name()))
 	}()
 
@@ -169,17 +169,25 @@ func TestMakeRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, client)
 
-	req, err := http.NewRequest("GET", "http://genesis.argocd.kubernetes.local/some/api:1234", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://genesis.argocd.kubernetes.local/some/api:1234", nil)
 	require.NoError(t, err)
 
 	resp, err := client.Do(req)
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
+
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.Equal(t, "fake-jwt-token", req.Header.Get("X-ORION-SERVICE-AUTH"))
 
 	// Call it again to hit the cache
-	req, err = http.NewRequest("GET", "http://genesis.argocd.kubernetes.local/some/api:1234", nil)
+	req, err = http.NewRequest(http.MethodGet, "http://genesis.argocd.kubernetes.local/some/api:1234", nil)
 	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
 
 	resp, err = client.Do(req)
 	require.NoError(t, err)
@@ -211,11 +219,15 @@ func TestBadURL(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, client)
 
-	req, err := http.NewRequest("GET", "http://genesis.argocd", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://genesis.argocd", nil)
 	require.NoError(t, err)
 
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	require.Error(t, err)
+
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
 }
 
 func setupTest(t *testing.T) (string, string) {
@@ -230,10 +242,10 @@ func setupTest(t *testing.T) (string, string) {
 		oriongo.TokenPath = origToken
 		oriongo.NamespacePath = origNs
 	})
-	privateKey, _ := generateTestRSAKey(t)
+	privateKey := generateTestRSAKey(t)
 	kid := "test-kid-noaud"
 
-	token := createTestJWT(t, privateKey, kid, map[string]interface{}{
+	token := createTestJWT(t, privateKey, kid, map[string]any{
 		"sub":                                    "system:serviceaccount:default:rhea",
 		"kubernetes.io/serviceaccount/namespace": "default",
 		"kubernetes.io/serviceaccount/service-account.name": "rhea",
@@ -244,13 +256,13 @@ func setupTest(t *testing.T) (string, string) {
 	require.NoError(t, err)
 	_, err = file.WriteString(token)
 	require.NoError(t, err)
-	file.Close() // close immediately after writing, before Setup() reads it
+	require.NoError(t, file.Close())
 
 	namespaceFile, err := os.CreateTemp("./", "namespace_file")
 	require.NoError(t, err)
 	_, err = namespaceFile.WriteString("default")
 	require.NoError(t, err)
-	namespaceFile.Close() // same here
+	require.NoError(t, namespaceFile.Close())
 
 	oriongo.TokenPath = file.Name()
 	oriongo.NamespacePath = namespaceFile.Name()
@@ -263,9 +275,9 @@ func setupK8sTestClient() (kubernetes.Interface, error) {
 	fakeK8s := testclient.NewSimpleClientset()
 
 	fakeK8s.PrependReactor("create", "serviceaccounts/token",
-		func(action k8stesting.Action) (bool, runtime.Object, error) {
+		func(_ k8stesting.Action) (bool, runtime.Object, error) {
 			return true, &authenticationv1.TokenRequest{
-				Status: authenticationv1.TokenRequestStatus{
+				Status: authenticationv1.TokenRequestStatus{ //nolint:gosec
 					Token:               "fake-jwt-token",
 					ExpirationTimestamp: metav1.NewTime(time.Now().Add(10 * time.Minute)),
 				},
@@ -273,14 +285,14 @@ func setupK8sTestClient() (kubernetes.Interface, error) {
 		},
 	)
 
-	for _, sa := range []struct{ name, ns string }{
+	for _, serviceAccount := range []struct{ name, ns string }{
 		{"genesis", "argocd"},
 		{"rhea", "default"},
 	} {
-		_, err := fakeK8s.CoreV1().ServiceAccounts(sa.ns).Create(
+		_, err := fakeK8s.CoreV1().ServiceAccounts(serviceAccount.ns).Create(
 			context.Background(),
 			&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{Name: sa.name, Namespace: sa.ns},
+				ObjectMeta: metav1.ObjectMeta{Name: serviceAccount.name, Namespace: serviceAccount.ns},
 			},
 			metav1.CreateOptions{},
 		)
@@ -295,7 +307,7 @@ func setupK8sTestClientFail() (kubernetes.Interface, error) {
 	return nil, errors.New("test error")
 }
 
-func createTestJWT(t *testing.T, privateKey *rsa.PrivateKey, kid string, claims map[string]interface{}) string {
+func createTestJWT(t *testing.T, privateKey *rsa.PrivateKey, kid string, claims map[string]any) string {
 	t.Helper()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(claims))
@@ -307,19 +319,19 @@ func createTestJWT(t *testing.T, privateKey *rsa.PrivateKey, kid string, claims 
 	return signed
 }
 
-func generateTestRSAKey(t *testing.T) (*rsa.PrivateKey, *rsa.PublicKey) {
+func generateTestRSAKey(t *testing.T) *rsa.PrivateKey {
 	t.Helper()
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed to generate test RSA key")
 
-	return privateKey, &privateKey.PublicKey
+	return privateKey
 }
 
 // mockTransport intercepts HTTP calls so tests don't hit the network
 type mockTransport struct{}
 
-func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (m *mockTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       http.NoBody,
