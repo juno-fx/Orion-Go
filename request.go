@@ -10,7 +10,7 @@ import (
 )
 
 func (c *Client) getToken(namespace, service string) (string, error) {
-	serviceKey := fmt.Sprintf("%s::%s", namespace, service)
+	serviceKey := fmt.Sprintf("%s::Service::%s", namespace, service)
 
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
@@ -18,17 +18,17 @@ func (c *Client) getToken(namespace, service string) (string, error) {
 	token := ""
 	expiry := time.Time{}
 
-	if item, ok := c.cache[service]; ok {
+	if item, ok := c.cache[serviceKey]; ok {
 		expiry = item.exp
 		token = item.token
 
-		if time.Now().Sub(expiry) > time.Minute*5 {
+		if time.Now().Before(expiry.Add(-time.Minute)) {
 			return token, nil
 		}
 	}
 
 	// Token is not in cache or has expired, need to make a new one
-	tokenStatus, err := c.create_token(serviceKey)
+	tokenStatus, err := c.createToken(serviceKey)
 	if err != nil {
 		return "", err
 	}
@@ -42,8 +42,8 @@ func (c *Client) getToken(namespace, service string) (string, error) {
 
 }
 
-func (c *Client) create_token(audience string) (*authenticationv1.TokenRequestStatus, error) {
-	var expirationSeconds int64 = 300 // 5 minutes
+func (c *Client) createToken(audience string) (*authenticationv1.TokenRequestStatus, error) {
+	var expirationSeconds int64 = 600 // 10 minutes
 
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
@@ -52,13 +52,12 @@ func (c *Client) create_token(audience string) (*authenticationv1.TokenRequestSt
 		},
 	}
 
-	ctx := context.Background()
 	response, err := c.k8sClient.CoreV1().
 		ServiceAccounts(c.namespace).
-		CreateToken(ctx, c.serviceAccountName, tokenRequest, metav1.CreateOptions{})
+		CreateToken(context.Background(), c.serviceAccountName, tokenRequest, metav1.CreateOptions{})
 
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	return &response.Status, nil

@@ -1,6 +1,7 @@
 package oriongo
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -33,6 +34,9 @@ type Client struct {
 	cache              map[string]cacheItem
 	cacheLock          sync.Mutex
 }
+
+// HTTPClient is the client used to make the http call, it is overridden in unit tests
+var HTTPClient = &http.Client{}
 
 type cacheItem struct {
 	token string
@@ -67,8 +71,11 @@ func Setup() (*Client, error) {
 	return orionClient, nil
 }
 
-func (c *Client) Do(req *http.Request, namespace, service string) (*http.Response, error) {
-
+func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	service, namespace, err := getNamespaceService(req.URL.String())
+	if err != nil {
+		return nil, err
+	}
 	token, err := c.getToken(namespace, service)
 	if err != nil {
 		return nil, err
@@ -76,7 +83,7 @@ func (c *Client) Do(req *http.Request, namespace, service string) (*http.Respons
 
 	req.Header.Add("X-ORION-SERVICE-AUTH", token)
 
-	return http.DefaultClient.Do(req)
+	return HTTPClient.Do(req)
 }
 
 func newK8sClient() (kubernetes.Interface, error) { // coverage-ignore
@@ -128,4 +135,19 @@ func getServiceAccountName() (string, error) {
 		return parts[3], nil
 	}
 	return "default", nil
+}
+
+func getNamespaceService(url string) (string, string, error) {
+	url = strings.TrimPrefix(url, "https://")
+	url = strings.TrimPrefix(url, "http://")
+
+	splitURL := strings.Split(url, ".")
+
+	// --------0---------1-----------2--3-------4-----------
+	// http://{service}.{namespace}.svc.cluster.local:{port}
+	if len(splitURL) < 4 {
+		return "", "", errors.New("request url is malformed")
+	}
+
+	return splitURL[0], splitURL[1], nil
 }
