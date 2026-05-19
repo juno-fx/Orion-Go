@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.12.0/.schema/devbox.schema.json",
+  "packages": [
+    "go@1.26.0",
+    "docker@latest",
+    "kubectl@latest",
+    "gnumake@latest",
+    "skaffold@latest",
+    "python312@latest",
+    "jq@latest",
+    "kind@0.24.0",
+    "golangci-lint@2.12.2"
+  ],
+  "shell": {
+    "init_hook": [
+      "go install github.com/vladopajic/go-test-coverage/v2@latest",
+      "echo 'Welcome to devbox!' > /dev/null"
+    ],
+    "scripts": {
+      "test": [
+        "echo \"Error: no test specified\" && exit 1"
+      ]
+    }
+  }
+}

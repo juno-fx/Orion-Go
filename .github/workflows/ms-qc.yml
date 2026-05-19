@@ -1,0 +1,66 @@
+name: Quality Control
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  check:
+    name: Checking Code
+    env:
+      IN_CI: "true"
+    runs-on:
+      - STANDARD-RUNNER
+    steps:
+      # this is the bare minimum to get the runner up and running.
+      - name: Install Git
+        run: sudo apt update && sudo apt-get install git -y
+
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.JUNO_CI_APP_ID }}
+          private-key: ${{ secrets.JUNO_CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Clone Source Code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Install Actions
+        uses: actions/checkout@v4
+        with:
+          repository: juno-fx/ci
+          ref: main
+          path: juno-ci
+          clean: false
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - uses: ./juno-ci/actions/runners/tooling
+        name: Prepare Runner
+        with:
+          key: ${{ secrets.AWS_ACCESS }}
+          secret: ${{ secrets.AWS_SECRET }}
+          region: ${{ secrets.AWS_REGION }}
+
+      - name: Safety Devbox
+        run: |
+          # safety net for new runners who already ship with podman override for docker and kind.
+          devbox rm docker kind || echo "No docker or kind present. Good to go."
+
+      - name: Check Code
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GIT_PASS }}
+          IN_CI: "true"
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "Token missing"
+            exit 1
+          else
+            echo "Token present"
+          fi
+          devbox run make install
+          devbox run make check

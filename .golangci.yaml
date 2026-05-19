@@ -1,0 +1,53 @@
+# See the dedicated "version" documentation section.
+version: "2"
+linters:
+  # See the dedicated "linters" documentation section.
+  default: all
+  disable:
+    - depguard
+    - godot
+    - wsl
+    - gochecknoglobals
+    - ireturn
+    - err113
+    - wrapcheck
+    - testpackage
+    - tagliatelle
+    - paralleltest
+    - noctx
+    - canonicalheader
+    - exhaustruct
+    - noinlineerr
+    - mnd
+  
+  settings:
+    varnamelen:
+      ignore-names:
+        - err
+        - ok
+        - i
+        - k
+        - v
+        - cm
+        - r 
+        - w
+        - n
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+# issues:
+#   # See the dedicated "issues" documentation section.
+#   option: value
+# # Output configuration options.
+# output:
+#   # See the dedicated "output" documentation section.
+#   option: value
+# # Options for analysis running.
+# run:
+#   # See the dedicated "run" documentation section.
+#   option: value
+# severity:
+#   # See the dedicated "severity" documentation section.
+#   option: value

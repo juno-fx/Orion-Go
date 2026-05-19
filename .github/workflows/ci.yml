@@ -1,0 +1,14 @@
+name: Microservice CI
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  QC:
+    uses: ./.github/workflows/ms-qc.yml
+    secrets: inherit
+  Test:
+    needs:
+      - QC
+    uses: ./.github/workflows/ms-test.yml
+    secrets: inherit
