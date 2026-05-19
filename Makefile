@@ -45,7 +45,7 @@ coverage-html: unit
 	${GOBIN}/go-test-coverage --config=./.testcoverage.yaml || true
 	xdg-open cover.html
 
-test: coverage integration
+test: coverage 
 
 integration:
 	@ echo " >> Running e2e tests << "

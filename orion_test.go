@@ -222,12 +222,9 @@ func TestBadURL(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "http://genesis.argocd", nil)
 	require.NoError(t, err)
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:bodyclose
 	require.Error(t, err)
-
-	defer func() {
-		require.NoError(t, resp.Body.Close())
-	}()
+	require.Nil(t, resp)
 }
 
 func setupTest(t *testing.T) (string, string) {
