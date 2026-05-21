@@ -6,10 +6,11 @@ import (
 	"crypto/rsa"
 	"errors"
 	"net/http"
-	oriongo "orion-go"
 	"os"
 	"testing"
 	"time"
+
+	oriongo "github.com/juno-fx/orion-go"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
