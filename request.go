@@ -45,7 +45,7 @@ func (c *Client) createToken(namespace, service string) (*authenticationv1.Token
 
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
-			Audiences:         []string{fmt.Sprintf("%s::Service::%s", namespace, service)},
+			Audiences:         []string{fmt.Sprintf(`%s::Service::"%s"`, namespace, service)},
 			ExpirationSeconds: &expirationSeconds,
 		},
 	}
