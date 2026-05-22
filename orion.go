@@ -4,6 +4,7 @@ package oriongo
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -160,6 +161,8 @@ func getNamespaceService(url string) (string, string, error) {
 	if len(splitURL) < 4 {
 		return "", "", errors.New("request url is malformed")
 	}
+
+	slog.Info("stuff", "service", splitURL[0], "namespace", splitURL[1])
 
 	return splitURL[0], splitURL[1], nil
 }

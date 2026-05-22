@@ -3,6 +3,7 @@ package oriongo
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -12,6 +13,7 @@ import (
 func (c *Client) getToken(namespace, service string) (string, error) {
 	serviceKey := fmt.Sprintf("%s::Service::%s", namespace, service)
 
+	slog.Info("service key", "key", serviceKey)
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
 
