@@ -11,7 +11,7 @@ import (
 )
 
 func (c *Client) getToken(namespace, service string) (string, error) {
-	serviceKey := fmt.Sprintf("%s::Service::\"%s\"", namespace, service)
+	serviceKey := fmt.Sprintf(`%s::%sy`, namespace, service)
 
 	slog.Info("service key", "key", serviceKey)
 	c.cacheLock.Lock()
@@ -27,7 +27,7 @@ func (c *Client) getToken(namespace, service string) (string, error) {
 	}
 
 	// Token is not in cache or has expired, need to make a new one
-	tokenStatus, err := c.createToken(serviceKey)
+	tokenStatus, err := c.createToken(namespace, service)
 	if err != nil {
 		return "", err
 	}
@@ -40,12 +40,12 @@ func (c *Client) getToken(namespace, service string) (string, error) {
 	return tokenStatus.Token, nil
 }
 
-func (c *Client) createToken(audience string) (*authenticationv1.TokenRequestStatus, error) {
+func (c *Client) createToken(namespace, service string) (*authenticationv1.TokenRequestStatus, error) {
 	var expirationSeconds int64 = 600 // 10 minutes
 
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
-			Audiences:         []string{audience},
+			Audiences:         []string{fmt.Sprintf("%s::Service::%s", namespace, service)},
 			ExpirationSeconds: &expirationSeconds,
 		},
 	}
