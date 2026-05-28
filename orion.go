@@ -4,7 +4,6 @@ package oriongo
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -90,7 +89,6 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	slog.Info("token val", "token", token)
 	req.Header.Add("X-ORION-SERVICE-AUTH", token)
 
 	return HTTPClient.Do(req) //nolint:gosec
@@ -161,8 +159,6 @@ func getNamespaceService(url string) (string, string, error) {
 	if len(splitURL) < 4 {
 		return "", "", errors.New("request url is malformed")
 	}
-
-	slog.Info("stuff", "service", splitURL[0], "namespace", splitURL[1])
 
 	return splitURL[0], splitURL[1], nil
 }
