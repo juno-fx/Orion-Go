@@ -11,7 +11,7 @@ import (
 )
 
 func (c *Client) getToken(namespace, service string) (string, error) {
-	serviceKey := fmt.Sprintf(`%s::%sy`, namespace, service)
+	serviceKey := fmt.Sprintf(`%s::%s`, namespace, service)
 
 	slog.Info("service key", "key", serviceKey)
 	c.cacheLock.Lock()
