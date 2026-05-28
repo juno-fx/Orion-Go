@@ -89,6 +89,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Add("X-ORION-SERVICE-AUTH", token)
 
 	return HTTPClient.Do(req) //nolint:gosec
