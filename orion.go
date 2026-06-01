@@ -15,6 +15,12 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// Interface is the generic function types used by the Orion go, its primary function is to enable
+// easier unit testing
+type Interface interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // These are vars so we can override them for testing etc
 var (
 	NamespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
@@ -45,7 +51,7 @@ type cacheItem struct {
 }
 
 // Setup initializes the orion client ready for use, creates and retrieves information from the k8s client
-func Setup() (*Client, error) {
+func Setup() (Interface, error) {
 	k8sClient, err := K8sClientFunc()
 	if err != nil {
 		return nil, err
